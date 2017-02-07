@@ -72,7 +72,7 @@ public class CodeGeneration
 			bestScore = best.getFitness().score;
 			final double median = agents.get(popSize / 2).getFitness().score;
 			final double mean = agents.stream().mapToDouble(a -> a.getFitness().score).average().getAsDouble();
-			System.out.println("Best: " + best.getDisplayName() + " with " + best.getFitness().score + " Avg: " + mean + " Median: " + median);
+			System.out.println("Best: " + best.getName() + " with " + best.getFitness().score + " Avg: " + mean + " Median: " + median);
 			// System.out.println(best.getFunction().toCode());
 
 			System.out.println("Stuck " + stuck + (stuck >= 50 && stuck % 50 == 0 ? " Culling Time!" : ""));
@@ -214,7 +214,7 @@ public class CodeGeneration
 	 */
 	private static boolean compileAgent(Agent agent) throws NoSuchMethodException, SecurityException, ClassNotFoundException {
 		if (DEBUG)
-			Log.info("Compiling " + agent.getDisplayName() + " (Origin " + agent.getOrigin() + ")");
+			Log.info("Compiling " + agent.getName() + " (Origin " + agent.getOrigin() + ")");
 
 		final String sourceCode = "package agents;" + Utils.NEWLINE
 				+ "public class " + agent.getName() + "{" + Utils.NEWLINE

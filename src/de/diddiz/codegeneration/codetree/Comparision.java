@@ -3,8 +3,10 @@ package de.diddiz.codegeneration.codetree;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import de.diddiz.codegeneration.generator.Context;
-import de.diddiz.codegeneration.generator.Generator;
+import de.diddiz.codegeneration.codetree.evaluation.EvaluationContext;
+import de.diddiz.codegeneration.codetree.generator.Context;
+import de.diddiz.codegeneration.codetree.generator.Generator;
+import de.diddiz.codegeneration.exceptions.UndeclaredVariableException;
 
 public class Comparision extends Expression
 {
@@ -18,20 +20,20 @@ public class Comparision extends Expression
 	}
 
 	@Override
-	public boolean eval() {
+	public boolean eval(EvaluationContext context) throws UndeclaredVariableException {
 		switch (op) {
 			case EQUAL:
-				return op1.eval() == op2.eval();
+				return op1.eval(context) == op2.eval(context);
 			case GREATER:
-				return op1.eval() > op2.eval();
+				return op1.eval(context) > op2.eval(context);
 			case GREATER_EQUAL:
-				return op1.eval() >= op2.eval();
+				return op1.eval(context) >= op2.eval(context);
 			case LESER_EQUAL:
-				return op1.eval() <= op2.eval();
+				return op1.eval(context) <= op2.eval(context);
 			case LESSER:
-				return op1.eval() < op2.eval();
+				return op1.eval(context) < op2.eval(context);
 			case NOT_EQUAL:
-				return op1.eval() != op2.eval();
+				return op1.eval(context) != op2.eval(context);
 			default:
 				throw new AssertionError();
 		}

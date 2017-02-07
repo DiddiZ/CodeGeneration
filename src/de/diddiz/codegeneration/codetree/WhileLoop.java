@@ -2,9 +2,11 @@ package de.diddiz.codegeneration.codetree;
 
 import java.util.List;
 import java.util.Set;
+import de.diddiz.codegeneration.codetree.evaluation.EvaluationContext;
+import de.diddiz.codegeneration.codetree.generator.Context;
+import de.diddiz.codegeneration.codetree.generator.Generator;
+import de.diddiz.codegeneration.exceptions.EvaluationException;
 import de.diddiz.codegeneration.exceptions.InfiniteLoopException;
-import de.diddiz.codegeneration.generator.Context;
-import de.diddiz.codegeneration.generator.Generator;
 import de.diddiz.utils.Utils;
 
 public class WhileLoop extends Statement
@@ -18,10 +20,10 @@ public class WhileLoop extends Statement
 	}
 
 	@Override
-	public Integer eval() throws InfiniteLoopException {
+	public Integer eval(EvaluationContext context) throws EvaluationException {
 		int loopCounter = 0; // TODO Replace by monitoring variable changes
-		while (condition.eval()) {
-			final Integer ret = block.eval();
+		while (condition.eval(context)) {
+			final Integer ret = block.eval(context);
 			if (ret != null) // Block returned
 				return ret;
 			loopCounter++;

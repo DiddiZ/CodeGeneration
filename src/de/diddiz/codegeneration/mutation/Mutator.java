@@ -7,7 +7,7 @@ import java.util.Set;
 import de.diddiz.codegeneration.Agent;
 import de.diddiz.codegeneration.AgentOrigin;
 import de.diddiz.codegeneration.codetree.CodeElement;
-import de.diddiz.codegeneration.generator.Context;
+import de.diddiz.codegeneration.codetree.generator.Context;
 
 public final class Mutator
 {

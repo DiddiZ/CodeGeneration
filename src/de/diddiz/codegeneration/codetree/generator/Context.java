@@ -1,4 +1,4 @@
-package de.diddiz.codegeneration.generator;
+package de.diddiz.codegeneration.codetree.generator;
 
 import java.util.ArrayList;
 import java.util.Collection;

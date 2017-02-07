@@ -5,8 +5,9 @@ import java.util.Set;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import de.diddiz.codegeneration.generator.Context;
-import de.diddiz.codegeneration.generator.Generator;
+import de.diddiz.codegeneration.codetree.evaluation.EvaluationContext;
+import de.diddiz.codegeneration.codetree.generator.Context;
+import de.diddiz.codegeneration.codetree.generator.Generator;
 
 public class IntLiteral extends IntValue
 {
@@ -24,7 +25,7 @@ public class IntLiteral extends IntValue
 	}
 
 	@Override
-	public int eval() {
+	public int eval(EvaluationContext context) {
 		return val;
 	}
 

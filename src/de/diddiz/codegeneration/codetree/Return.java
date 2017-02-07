@@ -2,8 +2,10 @@ package de.diddiz.codegeneration.codetree;
 
 import java.util.List;
 import java.util.Set;
-import de.diddiz.codegeneration.generator.Context;
-import de.diddiz.codegeneration.generator.Generator;
+import de.diddiz.codegeneration.codetree.evaluation.EvaluationContext;
+import de.diddiz.codegeneration.codetree.generator.Context;
+import de.diddiz.codegeneration.codetree.generator.Generator;
+import de.diddiz.codegeneration.exceptions.UndeclaredVariableException;
 
 public class Return extends Statement
 {
@@ -14,8 +16,8 @@ public class Return extends Statement
 	}
 
 	@Override
-	public Integer eval() {
-		return ret.eval();
+	public Integer eval(EvaluationContext context) throws UndeclaredVariableException {
+		return ret.eval(context);
 	}
 
 	@Override

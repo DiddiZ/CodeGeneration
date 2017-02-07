@@ -2,10 +2,11 @@ package de.diddiz.codegeneration.codetree;
 
 import java.util.List;
 import java.util.Set;
+import de.diddiz.codegeneration.codetree.evaluation.EvaluationContext;
+import de.diddiz.codegeneration.codetree.generator.Context;
+import de.diddiz.codegeneration.codetree.generator.Generator;
 import de.diddiz.codegeneration.exceptions.EvaluationException;
 import de.diddiz.codegeneration.exceptions.NoReturnException;
-import de.diddiz.codegeneration.generator.Context;
-import de.diddiz.codegeneration.generator.Generator;
 import de.diddiz.utils.Utils;
 
 public class Function extends CodeElement
@@ -27,10 +28,12 @@ public class Function extends CodeElement
 	}
 
 	public int eval(int... values) throws EvaluationException {
-		for (int i = 0; i < values.length; i++)
-			parameters[i].setValue(values[i]);
+		final EvaluationContext context = new EvaluationContext(null);
 
-		final Integer ret = block.eval();
+		for (int i = 0; i < values.length; i++)
+			context.declareVarible(parameters[i], values[i]);
+
+		final Integer ret = block.eval(context);
 		if (ret == null)
 			throw new NoReturnException();
 		return ret;

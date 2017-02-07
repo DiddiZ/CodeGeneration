@@ -22,7 +22,7 @@ import de.diddiz.codegeneration.codetree.Variable;
 public class AgentSmith
 {
 	public static Function create() {
-		final Variable a = new Variable("a", Type.Int);
+		final Variable a = Variable.create("a");
 
 		return new Function("cos", Type.Int, new Variable[]{a}, new Block(Lists.newArrayList(
 				new IfElse(

@@ -1,4 +1,4 @@
-package de.diddiz.codegeneration.generator;
+package de.diddiz.codegeneration.codetree.generator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +31,7 @@ public final class Generator
 		final Variable var;
 
 		if (context.random.nextDouble() < 0.5) { // new Variable
-			var = new Variable(context.freeVariableName(), Type.Int);
+			var = Variable.create(context.freeVariableName());
 
 			context.add(var);
 		} else

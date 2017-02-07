@@ -2,8 +2,10 @@ package de.diddiz.codegeneration.codetree;
 
 import java.util.List;
 import java.util.Set;
-import de.diddiz.codegeneration.generator.Context;
-import de.diddiz.codegeneration.generator.Generator;
+import de.diddiz.codegeneration.codetree.evaluation.EvaluationContext;
+import de.diddiz.codegeneration.codetree.generator.Context;
+import de.diddiz.codegeneration.codetree.generator.Generator;
+import de.diddiz.codegeneration.exceptions.UndeclaredVariableException;
 
 public class BinaryIntOperator extends IntValue
 {
@@ -17,14 +19,14 @@ public class BinaryIntOperator extends IntValue
 	}
 
 	@Override
-	public int eval() {
+	public int eval(EvaluationContext context) throws UndeclaredVariableException {
 		switch (op) {
 			case PLUS:
-				return op1.eval() + op2.eval();
+				return op1.eval(context) + op2.eval(context);
 			case MINUS:
-				return op1.eval() - op2.eval();
+				return op1.eval(context) - op2.eval(context);
 			case MULTIPLY:
-				return op1.eval() * op2.eval();
+				return op1.eval(context) * op2.eval(context);
 			default:
 				throw new AssertionError();
 		}

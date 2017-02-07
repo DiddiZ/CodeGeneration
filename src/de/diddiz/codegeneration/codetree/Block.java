@@ -7,8 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import com.google.common.base.Preconditions;
-import de.diddiz.codegeneration.exceptions.InfiniteLoopException;
-import de.diddiz.codegeneration.generator.Context;
+import de.diddiz.codegeneration.codetree.evaluation.EvaluationContext;
+import de.diddiz.codegeneration.codetree.generator.Context;
+import de.diddiz.codegeneration.exceptions.EvaluationException;
 import de.diddiz.utils.Utils;
 
 public class Block extends CodeElement
@@ -54,11 +55,14 @@ public class Block extends CodeElement
 				variables.values().toArray(new Variable[variables.size()]));
 	}
 
-	public Integer eval() throws InfiniteLoopException {
+	public Integer eval(EvaluationContext parent) throws EvaluationException {
+		final EvaluationContext context = new EvaluationContext(parent);
+
 		for (final Variable var : declaredVariables)
-			var.setValue(0);
+			context.declareVarible(var, 0);
+
 		for (final Statement st : statements) {
-			final Integer ret = st.eval();
+			final Integer ret = st.eval(context);
 			if (ret != null)
 				return ret;
 		}

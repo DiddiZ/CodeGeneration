@@ -2,9 +2,10 @@ package de.diddiz.codegeneration.codetree;
 
 import java.util.List;
 import java.util.Set;
-import de.diddiz.codegeneration.exceptions.InfiniteLoopException;
-import de.diddiz.codegeneration.generator.Context;
-import de.diddiz.codegeneration.generator.Generator;
+import de.diddiz.codegeneration.codetree.evaluation.EvaluationContext;
+import de.diddiz.codegeneration.codetree.generator.Context;
+import de.diddiz.codegeneration.codetree.generator.Generator;
+import de.diddiz.codegeneration.exceptions.EvaluationException;
 import de.diddiz.utils.Utils;
 
 public class IfElse extends Statement
@@ -23,10 +24,10 @@ public class IfElse extends Statement
 	}
 
 	@Override
-	public Integer eval() throws InfiniteLoopException {
-		if (condition.eval())
-			return ifBlock.eval();
-		return elseBlock != null ? elseBlock.eval() : null;
+	public Integer eval(EvaluationContext context) throws EvaluationException {
+		if (condition.eval(context))
+			return ifBlock.eval(context);
+		return elseBlock != null ? elseBlock.eval(context) : null;
 	}
 
 	@Override

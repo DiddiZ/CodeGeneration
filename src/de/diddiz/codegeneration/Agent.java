@@ -6,8 +6,8 @@ import de.diddiz.codegeneration.codetree.Codetree;
 import de.diddiz.codegeneration.codetree.Function;
 import de.diddiz.codegeneration.codetree.Type;
 import de.diddiz.codegeneration.codetree.Variable;
-import de.diddiz.codegeneration.generator.Context;
-import de.diddiz.codegeneration.generator.Generator;
+import de.diddiz.codegeneration.codetree.generator.Context;
+import de.diddiz.codegeneration.codetree.generator.Generator;
 
 public class Agent
 {
@@ -19,27 +19,12 @@ public class Agent
 	private final AgentOrigin origin;
 
 	private Fitness fitness;
-	int complexity = -1; // Number of elements in code tree
 	Method m;
 
 	public Agent(Function f, AgentOrigin origin) {
 		id = nextId();
 		this.f = f;
 		this.origin = origin;
-	}
-
-	public String getDisplayName() {
-		final String name = getName();
-		// if (parents.length == 1)
-		// name += "<-" + parents[0].getDisplayName();
-		// else if (parents.length > 1) {
-		// name += "<-(" + parents[0].getDisplayName();
-		//
-		// for (int i = 1; i < parents.length; i++)
-		// name += "+" + parents[1].getDisplayName();
-		// name += ")";
-		// }
-		return name;
 	}
 
 	public Fitness getFitness() {
@@ -70,29 +55,13 @@ public class Agent
 		this.fitness = fitness;
 	}
 
-	// /**
-	// * @return whether two agents have a common predecessor
-	// */
-	// public static boolean related(Agent a1, Agent a2) {
-	// while (a1 != null) {
-	// Agent tmp = a2;
-	// while (tmp != null) {
-	// if (tmp == a1)
-	// return true;
-	// tmp = tmp.parent;
-	// }
-	// a1 = a1.parent;
-	// }
-	// return false;
-	// }
-
 	public static Agent createRandomAgent() {
 		return new Agent(
 				Generator.generateFunction(
 						"func",
 						Type.Int,
 						new Context(new Random()),
-						new Variable[]{new Variable("a", Type.Int)}),
+						new Variable[]{Variable.create("a")}),
 				AgentOrigin.RANDOM);
 	}
 

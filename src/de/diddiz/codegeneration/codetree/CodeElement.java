@@ -3,7 +3,7 @@ package de.diddiz.codegeneration.codetree;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import de.diddiz.codegeneration.generator.Context;
+import de.diddiz.codegeneration.codetree.generator.Context;
 
 public abstract class CodeElement
 {

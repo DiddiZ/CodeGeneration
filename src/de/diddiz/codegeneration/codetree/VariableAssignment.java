@@ -2,8 +2,10 @@ package de.diddiz.codegeneration.codetree;
 
 import java.util.List;
 import java.util.Set;
-import de.diddiz.codegeneration.generator.Context;
-import de.diddiz.codegeneration.generator.Generator;
+import de.diddiz.codegeneration.codetree.evaluation.EvaluationContext;
+import de.diddiz.codegeneration.codetree.generator.Context;
+import de.diddiz.codegeneration.codetree.generator.Generator;
+import de.diddiz.codegeneration.exceptions.UndeclaredVariableException;
 
 public class VariableAssignment extends Statement
 {
@@ -16,8 +18,8 @@ public class VariableAssignment extends Statement
 	}
 
 	@Override
-	public Integer eval() {
-		var.setValue(val.eval());
+	public Integer eval(EvaluationContext context) throws UndeclaredVariableException {
+		context.setValue(var, val.eval(context));
 		return null; // Does never return
 	}
 
