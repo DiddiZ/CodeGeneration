@@ -55,12 +55,12 @@ public class Agent
 		this.fitness = fitness;
 	}
 
-	public static Agent createRandomAgent() {
+	public static Agent createRandomAgent(Random random) {
 		return new Agent(
 				Generator.generateFunction(
 						"func",
 						Type.Int,
-						new Context(new Random()),
+						new Context(random),
 						new Variable[]{Variable.create("a")}),
 				AgentOrigin.RANDOM);
 	}

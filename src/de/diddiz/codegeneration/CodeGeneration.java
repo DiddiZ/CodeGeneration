@@ -3,9 +3,16 @@ package de.diddiz.codegeneration;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import de.diddiz.codegeneration.codetree.Function;
@@ -29,35 +36,47 @@ public class CodeGeneration
 
 	private static final InMemoryCompiler compiler = new InMemoryCompiler();
 
+	private final ExecutorService executorService = Executors.newWorkStealingPool();
 	private final EventBus eventBus = new EventBus();
 
-	public void generate(ExactFunction f, int popSize, Random random) {
+	public void generate(ExactFunction f, int popSize, Random random) throws InterruptedException, ExecutionException {
 		final DataPoints expected = f.exactValues();
 
-		// Initial population
+		// Agent pool
 		final LinkedList<Agent> agents = new LinkedList<>();
 
+		// Fire start event to allow listeners to add agents
 		final GeneratorStartEvent generatorStartEvent = new GeneratorStartEvent(agents);
 		eventBus.post(generatorStartEvent); // Fire event
 		int gen = generatorStartEvent.getGeneration();
 
-		// Fill pool
-		while (agents.size() < popSize)
-			agents.add(Agent.createRandomAgent());
+		{// Initial population
+			final List<Callable<Agent>> tasks = new ArrayList<>();
+			for (int i = agents.size(); i < popSize; i++)
+				tasks.add(() -> Agent.createRandomAgent(new Random(random.nextLong())));
+			for (final Future<Agent> futureAgent : executorService.invokeAll(tasks))
+				agents.add(futureAgent.get());
+		}
 
 		double bestScore = 0;
 		Agent lastBest = null;
 		int stuck = 0;
 		for (; bestScore < 100; gen++) {
-			// Testing
-			System.out.println("Testing Gen " + gen + " (" + agents.size() + " agents)");
+			{ // Asses fitness of all new agents
+				System.out.println("Testing Gen " + gen + " (" + agents.size() + " agents)");
+				final List<Callable<Object>> tasks = new ArrayList<>();
 
-			agents.parallelStream().forEach(a -> { // TODO Use Threadpool
-				if (a.getFitness() == null)
-					testFitness2(a, expected);
-			});
+				for (final Agent a : agents)// Create tasks
+					if (a.getFitness() == null)
+						tasks.add(() -> {
+							testFitness2(a, expected);
+							return null;
+						});
 
-			Collections.sort(agents, (a1, a2) -> a2.getFitness().compareTo(a1.getFitness()));
+				executorService.invokeAll(tasks);
+
+				Collections.sort(agents, (a1, a2) -> a2.getFitness().compareTo(a1.getFitness()));
+			}
 
 			final Agent best = agents.get(0);
 			// Check if we're stuck
@@ -86,31 +105,37 @@ public class CodeGeneration
 			if (stuck >= 50 && stuck % 50 == 0)
 				agents.removeIf(a -> a != best && random.nextBoolean());
 
-			// Repop
-			while (agents.size() < popSize) {// TODO thread pool
-				final double rnd = random.nextDouble();
+			{// Repop
+				final List<Callable<Agent>> tasks = new ArrayList<>();
+				for (int i = agents.size(); i < popSize; i++) {
+					final double rnd = random.nextDouble();
 
-				if (rnd < 0.25) // Generate new
-					agents.add(Agent.createRandomAgent());
-				else if (rnd < 0.75) { // Mutate
-					final double selected = random.nextDouble();
-					double sum = 0;
-					final double n = agents.size();
+					if (rnd < 0.25) // Generate new
+						tasks.add(() -> Agent.createRandomAgent(new Random(random.nextLong())));
+					else if (rnd < 0.75) { // Mutate
+						final double selected = random.nextDouble();
+						double sum = 0;
+						final double n = agents.size();
 
-					for (int k = 0; k < n; k++) {
-						// sum += (n - k) * 2 / (n * n + n);
-						sum += 6 * (n - k) * (n - k) / n / (n + 1) / (2 * n + 1);
-						if (sum + 1E-8 >= selected) { // Found selected
-							agents.add(Mutator.mutate(agents.get(k), random.nextInt(5 + stuck / 10) + 1, random)); // Add mutated copy random.nextInt(5 + stuck)
-							break;
+						for (int k = 0; k < n; k++) {
+							// sum += (n - k) * 2 / (n * n + n);
+							sum += 6 * (n - k) * (n - k) / n / (n + 1) / (2 * n + 1);
+							if (sum + 1E-8 >= selected) { // Found selected
+								final Agent a = agents.get(k);
+								final int rounds = random.nextInt(5 + stuck / 10) + 1;
+								tasks.add(() -> Mutator.mutate(a, rounds, new Random(random.nextLong())));
+								break;
+							}
 						}
-					}
-				} else {// Cross
-					final Agent a = agents.get(random.nextInt(agents.size() / 5));
-					final Agent b = agents.get(random.nextInt(agents.size()));
+					} else {// Cross
+						final Agent a = agents.get(random.nextInt(agents.size() / 5));
+						final Agent b = agents.get(random.nextInt(agents.size()));
 
-					agents.add(Mutator.cross(a, b, random));
+						tasks.add(() -> Mutator.cross(a, b, new Random(random.nextLong())));
+					}
 				}
+				for (final Future<Agent> futureAgent : executorService.invokeAll(tasks))
+					agents.add(futureAgent.get());
 			}
 		}
 
@@ -121,7 +146,7 @@ public class CodeGeneration
 		return eventBus;
 	}
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
 		// CLI stuff
 		final OptionParser parser = new OptionParser();
 		parser.accepts("visualize");
