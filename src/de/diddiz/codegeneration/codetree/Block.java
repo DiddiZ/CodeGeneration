@@ -1,12 +1,11 @@
 package de.diddiz.codegeneration.codetree;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
 import com.google.common.base.Preconditions;
 import de.diddiz.codegeneration.exceptions.InfiniteLoopException;
 import de.diddiz.codegeneration.generator.Context;
@@ -43,16 +42,16 @@ public class Block extends CodeElement
 		for (int i = writeStart + replaced; i < statements.length; i++)
 			combi.add(statements[i]);
 
-		final Set<Variable> variables = new HashSet<>();
+		final Map<String, Variable> variables = new HashMap<>();
 		for (final Statement st : combi)
 			if (st instanceof VariableAssignment) {
 				final Variable var = ((VariableAssignment)st).getVariable();
 				if (!context.contains(var.getName()))
-					variables.add(var);
+					variables.put(var.getName(), var);
 			}
 
 		return new Block(combi.toArray(new Statement[combi.size()]),
-				Stream.concat(Arrays.stream(declaredVariables), Arrays.stream(other.declaredVariables)).distinct().toArray(i -> new Variable[i]));
+				variables.values().toArray(new Variable[variables.size()]));
 	}
 
 	public Integer eval() throws InfiniteLoopException {

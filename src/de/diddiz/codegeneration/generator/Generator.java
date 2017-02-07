@@ -55,7 +55,7 @@ public final class Generator
 				break;
 		}
 
-		if (context.getDepth() == 3 && (statements.isEmpty() || !statements.get(statements.size() - 1).returns())) // Add teturn at end if neccessary
+		if (context.getDepth() == 3 && (statements.isEmpty() || !statements.get(statements.size() - 1).returns())) // Add return at end if neccessary
 			statements.add(generateReturn(context));
 
 		return new Block(statements, context.getLocalVariables());

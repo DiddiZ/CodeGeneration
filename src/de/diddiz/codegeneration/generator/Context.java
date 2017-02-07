@@ -3,15 +3,18 @@ package de.diddiz.codegeneration.generator;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import de.diddiz.codegeneration.codetree.Variable;
 import de.diddiz.utils.Utils;
 
 public class Context
 {
 	private final Map<String, Variable> variables = new HashMap<>();
+	private final Set<String> declared = new HashSet<>();
 	private final Context parent;
 	private final int depth;
 	public final Random random;
@@ -34,10 +37,16 @@ public class Context
 
 	public void add(Variable var) {
 		variables.put(var.getName(), var);
+
+		Context cur = this;
+		while (cur != null) {
+			cur.declared.add(var.getName());
+			cur = cur.parent;
+		}
 	}
 
 	public boolean contains(String variableName) {
-		if (variables.containsKey(variableName))
+		if (declared.contains(variableName))
 			return true;
 
 		if (parent != null)

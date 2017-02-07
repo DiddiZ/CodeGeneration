@@ -214,7 +214,7 @@ public class CodeGeneration
 	 */
 	private static boolean compileAgent(Agent agent) throws NoSuchMethodException, SecurityException, ClassNotFoundException {
 		if (DEBUG)
-			Log.info("Compiling " + agent.getDisplayName());
+			Log.info("Compiling " + agent.getDisplayName() + " (Origin " + agent.getOrigin() + ")");
 
 		final String sourceCode = "package agents;" + Utils.NEWLINE
 				+ "public class " + agent.getName() + "{" + Utils.NEWLINE
