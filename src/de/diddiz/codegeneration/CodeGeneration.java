@@ -22,6 +22,7 @@ import de.diddiz.codegeneration.events.GenerationCompleteEvent;
 import de.diddiz.codegeneration.events.GeneratorStartEvent;
 import de.diddiz.codegeneration.exceptions.EvaluationException;
 import de.diddiz.codegeneration.mutation.Mutator;
+import de.diddiz.codegeneration.visualization.GenerationStats;
 import de.diddiz.codegeneration.visualization.GraphWindow;
 import de.diddiz.codegeneration.webinterface.WebServer;
 import de.diddiz.utils.Utils;
@@ -167,7 +168,9 @@ public class CodeGeneration
 			codeGeneration.eventBus.register(new GraphWindow());
 
 		if (options.has("server"))
-			codeGeneration.eventBus.register(new WebServer(8000));
+			codeGeneration.eventBus.register(new WebServer(80));
+
+		codeGeneration.eventBus.register(new GenerationStats());
 
 		final int poolSize = options.valueOf(poolSizeOption);
 
