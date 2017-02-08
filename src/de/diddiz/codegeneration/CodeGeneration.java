@@ -25,6 +25,7 @@ import de.diddiz.codegeneration.mutation.Mutator;
 import de.diddiz.codegeneration.visualization.GraphWindow;
 import de.diddiz.codegeneration.webinterface.WebServer;
 import de.diddiz.utils.Utils;
+import de.diddiz.utils.factories.Factory;
 import de.diddiz.utils.logging.Log;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -46,37 +47,30 @@ public class CodeGeneration
 		final LinkedList<Agent> agents = new LinkedList<>();
 
 		// Fire start event to allow listeners to add agents
-		final GeneratorStartEvent generatorStartEvent = new GeneratorStartEvent(agents);
+		final GeneratorStartEvent generatorStartEvent = new GeneratorStartEvent();
 		eventBus.post(generatorStartEvent); // Fire event
 		int gen = generatorStartEvent.getGeneration();
 
 		{// Initial population
 			final List<Callable<Agent>> tasks = new ArrayList<>();
-			for (int i = agents.size(); i < popSize; i++)
-				tasks.add(() -> Agent.createRandomAgent(new Random(random.nextLong())));
-			for (final Future<Agent> futureAgent : executorService.invokeAll(tasks))
-				agents.add(futureAgent.get());
+
+			// Calc fitness of external agents
+			for (final Factory<Agent> agentFactory : generatorStartEvent.getAgentFactories())
+				tasks.add(createAgentTask(agentFactory, expected));
+
+			// Fill pool with random agents
+			for (int i = tasks.size(); i < popSize; i++)
+				tasks.add(createRandomAgentTask(new Random(random.nextLong()), expected));
+			// Create agents
+			createAgents(agents, tasks);
 		}
 
 		double bestScore = 0;
 		Agent lastBest = null;
 		int stuck = 0;
 		for (; bestScore < 100; gen++) {
-			{ // Asses fitness of all new agents
-				System.out.println("Testing Gen " + gen + " (" + agents.size() + " agents)");
-				final List<Callable<Object>> tasks = new ArrayList<>();
-
-				for (final Agent a : agents)// Create tasks
-					if (a.getFitness() == null)
-						tasks.add(() -> {
-							testFitness2(a, expected);
-							return null;
-						});
-
-				executorService.invokeAll(tasks);
-
-				Collections.sort(agents, (a1, a2) -> a2.getFitness().compareTo(a1.getFitness()));
-			}
+			System.out.println("Generation " + gen + " (" + agents.size() + " agents)");
+			Collections.sort(agents, (a1, a2) -> a2.getFitness().compareTo(a1.getFitness()));
 
 			final Agent best = agents.get(0);
 			// Check if we're stuck
@@ -111,7 +105,7 @@ public class CodeGeneration
 					final double rnd = random.nextDouble();
 
 					if (rnd < 0.25) // Generate new
-						tasks.add(() -> Agent.createRandomAgent(new Random(random.nextLong())));
+						tasks.add(createRandomAgentTask(new Random(random.nextLong()), expected));
 					else if (rnd < 0.75) { // Mutate
 						final double selected = random.nextDouble();
 						double sum = 0;
@@ -121,21 +115,23 @@ public class CodeGeneration
 							// sum += (n - k) * 2 / (n * n + n);
 							sum += 6 * (n - k) * (n - k) / n / (n + 1) / (2 * n + 1);
 							if (sum + 1E-8 >= selected) { // Found selected
-								final Agent a = agents.get(k);
-								final int rounds = random.nextInt(5 + stuck / 10) + 1;
-								tasks.add(() -> Mutator.mutate(a, rounds, new Random(random.nextLong())));
+								tasks.add(mutateAgentTask(
+										agents.get(k),
+										random.nextInt(5 + stuck / 10) + 1,
+										new Random(random.nextLong()),
+										expected));
 								break;
 							}
 						}
-					} else {// Cross
-						final Agent a = agents.get(random.nextInt(agents.size() / 5));
-						final Agent b = agents.get(random.nextInt(agents.size()));
+					} else // Cross
+						tasks.add(crossAgentsTask(agents.get(random.nextInt(agents.size() / 5)),
+								agents.get(random.nextInt(agents.size())),
+								new Random(random.nextLong()),
+								expected));
 
-						tasks.add(() -> Mutator.cross(a, b, new Random(random.nextLong())));
-					}
 				}
-				for (final Future<Agent> futureAgent : executorService.invokeAll(tasks))
-					agents.add(futureAgent.get());
+				// Create agents
+				createAgents(agents, tasks);
 			}
 		}
 
@@ -144,6 +140,14 @@ public class CodeGeneration
 
 	public EventBus getEventBus() {
 		return eventBus;
+	}
+
+	private void createAgents(List<Agent> pool, List<Callable<Agent>> tasks) throws InterruptedException, ExecutionException {
+		for (final Future<Agent> futureAgent : executorService.invokeAll(tasks)) {
+			final Agent a = futureAgent.get();
+			if (a != null)
+				pool.add(a);
+		}
 	}
 
 	public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
@@ -163,7 +167,7 @@ public class CodeGeneration
 			codeGeneration.eventBus.register(new GraphWindow());
 
 		if (options.has("server"))
-			codeGeneration.eventBus.register(new WebServer(80));
+			codeGeneration.eventBus.register(new WebServer(8000));
 
 		final int poolSize = options.valueOf(poolSizeOption);
 
@@ -210,7 +214,7 @@ public class CodeGeneration
 		}
 	}
 
-	public static void testFitness2(Agent agent, DataPoints expected) {
+	public static Fitness testFitness2(Agent agent, DataPoints expected) {
 		try {
 			final int[] datapoints = new int[100];
 			final Function f = agent.getFunction();
@@ -219,17 +223,16 @@ public class CodeGeneration
 				datapoints[i] = f.eval(i);
 
 			// Calculation successfull
-			agent.setFitness(new Fitness(
+			return new Fitness(
 					true,
 					f.getChildren().size(),
 					expected,
-					new DataPoints(datapoints)));
+					new DataPoints(datapoints));
 		} catch (final EvaluationException ex) {
-			agent.setFitness(Fitness.FAILED);
 			if (DEBUG)
 				Log.warning("Agend failed: ", ex);
+			return Fitness.FAILED;
 		}
-
 	}
 
 	/**
@@ -260,12 +263,45 @@ public class CodeGeneration
 		return false;
 	}
 
+	private static Callable<Agent> createAgentTask(Factory<Agent> agentFactory, DataPoints expected) {
+		return () -> {
+			final Agent a = agentFactory.create();
+			if (a != null)
+				a.setFitness(testFitness2(a, expected));
+			return a;
+		};
+	}
+
+	private static Callable<Agent> createRandomAgentTask(Random random, DataPoints expected) {
+		return () -> {
+			final Agent a = Agent.createRandomAgent(random);
+			a.setFitness(testFitness2(a, expected));
+			return a;
+		};
+	}
+
+	private static Callable<Agent> crossAgentsTask(Agent parent1, Agent parent2, Random random, DataPoints expected) {
+		return () -> {
+			final Agent a = Mutator.cross(parent1, parent2, random);
+			a.setFitness(testFitness2(a, expected));
+			return a;
+		};
+	}
+
 	private static File generatePopulationFolder(File folder) {
 		File popFolder;
 		int pop = 1;
 		while ((popFolder = new File(folder, "pop-" + pop + "/")).exists())
 			pop++;
 		return popFolder;
+	}
+
+	private static Callable<Agent> mutateAgentTask(Agent parent, int rounds, Random random, DataPoints expected) {
+		return () -> {
+			final Agent a = Mutator.mutate(parent, rounds, random);
+			a.setFitness(testFitness2(a, expected));
+			return a;
+		};
 	}
 
 	private static class TestWorker implements Runnable

@@ -1,19 +1,23 @@
 package de.diddiz.codegeneration.events;
 
+import java.util.ArrayList;
 import java.util.List;
 import de.diddiz.codegeneration.Agent;
+import de.diddiz.utils.factories.Factory;
 
 public class GeneratorStartEvent
 {
-	private final List<Agent> agents;
+	private final List<Factory<Agent>> agentFactories = new ArrayList<>();
 	private int generation = 0;
 
-	public GeneratorStartEvent(List<Agent> agents) {
-		this.agents = agents;
+	public GeneratorStartEvent() {}
+
+	public void addAgent(Factory<Agent> agentFactory) {
+		agentFactories.add(agentFactory);
 	}
 
-	public void addAgent(Agent a) {
-		agents.add(a);
+	public List<Factory<Agent>> getAgentFactories() {
+		return agentFactories;
 	}
 
 	public int getGeneration() {

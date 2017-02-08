@@ -39,18 +39,22 @@ public class HeroPersistance
 
 	@Subscribe
 	public void onGeneratorStart(GeneratorStartEvent e) {
-		for (final File file : popFolder.listFiles())
-			try {
-				e.addAgent(Agent.loadAgent(Utils.read(file), AgentOrigin.ANCIENT));
-				if (file.getName().startsWith(AGENT_PREFIX)) {
-					// Make generation start some generations later
-					final int gen = Integer.parseInt(file.getName().substring(AGENT_PREFIX.length(), file.getName().length() - 5));
-					if (gen > e.getGeneration())
-						e.setGeneration(gen);
+		for (final File file : popFolder.listFiles()) {
+			e.addAgent(() -> {
+				try {
+					return Agent.loadAgent(Utils.read(file), AgentOrigin.ANCIENT);
+				} catch (final IOException ex) {
+					Log.severe("Failed to load agent: ", ex);
+					return null;
 				}
-				ignoreFirst = true;
-			} catch (final IOException ex) {
-				Log.severe("Failed to load agent: ", ex);
+			});
+			if (file.getName().startsWith(AGENT_PREFIX)) {
+				// Make generation start some generations later
+				final int gen = Integer.parseInt(file.getName().substring(AGENT_PREFIX.length(), file.getName().length() - 5));
+				if (gen > e.getGeneration())
+					e.setGeneration(gen);
 			}
+			ignoreFirst = true;
+		}
 	}
 }
