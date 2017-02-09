@@ -44,7 +44,7 @@ public class Agent
 	}
 
 	public String getName() {
-		return String.format("Agent_%012d", id);
+		return "Agent_" + id;
 	}
 
 	public AgentOrigin getOrigin() {

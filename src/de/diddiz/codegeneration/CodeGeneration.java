@@ -38,15 +38,18 @@ public class CodeGeneration
 
 	private static final InMemoryCompiler compiler = new InMemoryCompiler();
 
+	private final LinkedList<Agent> agents = new LinkedList<>(); // Agent pool
+
+	private final DataPoints expected;
+
 	private final ExecutorService executorService = Executors.newWorkStealingPool();
 	private final EventBus eventBus = new EventBus();
 
-	public void generate(ExactFunction f, int popSize, Random random) throws InterruptedException, ExecutionException {
-		final DataPoints expected = f.exactValues();
+	public CodeGeneration(ExactFunction f) {
+		expected = f.exactValues();
+	}
 
-		// Agent pool
-		final LinkedList<Agent> agents = new LinkedList<>();
-
+	public void generate(int popSize, Random random) throws InterruptedException, ExecutionException {
 		// Fire start event to allow listeners to add agents
 		final GeneratorStartEvent generatorStartEvent = new GeneratorStartEvent();
 		eventBus.post(generatorStartEvent); // Fire event
@@ -57,13 +60,13 @@ public class CodeGeneration
 
 			// Calc fitness of external agents
 			for (final Factory<Agent> agentFactory : generatorStartEvent.getAgentFactories())
-				tasks.add(createAgentTask(agentFactory, expected));
+				tasks.add(createAgentTask(agentFactory));
 
 			// Fill pool with random agents
 			for (int i = tasks.size(); i < popSize; i++)
-				tasks.add(createRandomAgentTask(new Random(random.nextLong()), expected));
+				tasks.add(createRandomAgentTask(new Random(random.nextLong())));
 			// Create agents
-			createAgents(agents, tasks);
+			createAgents(tasks);
 		}
 
 		double bestScore = 0;
@@ -106,7 +109,7 @@ public class CodeGeneration
 					final double rnd = random.nextDouble();
 
 					if (rnd < 0.25) // Generate new
-						tasks.add(createRandomAgentTask(new Random(random.nextLong()), expected));
+						tasks.add(createRandomAgentTask(new Random(random.nextLong())));
 					else if (rnd < 0.75) { // Mutate
 						final double selected = random.nextDouble();
 						double sum = 0;
@@ -119,20 +122,18 @@ public class CodeGeneration
 								tasks.add(mutateAgentTask(
 										agents.get(k),
 										random.nextInt(5 + stuck / 10) + 1,
-										new Random(random.nextLong()),
-										expected));
+										new Random(random.nextLong())));
 								break;
 							}
 						}
 					} else // Cross
 						tasks.add(crossAgentsTask(agents.get(random.nextInt(agents.size() / 5)),
 								agents.get(random.nextInt(agents.size())),
-								new Random(random.nextLong()),
-								expected));
+								new Random(random.nextLong())));
 
 				}
 				// Create agents
-				createAgents(agents, tasks);
+				createAgents(tasks);
 			}
 		}
 
@@ -143,12 +144,45 @@ public class CodeGeneration
 		return eventBus;
 	}
 
-	private void createAgents(List<Agent> pool, List<Callable<Agent>> tasks) throws InterruptedException, ExecutionException {
+	private void createAgents(List<Callable<Agent>> tasks) throws InterruptedException, ExecutionException {
 		for (final Future<Agent> futureAgent : executorService.invokeAll(tasks)) {
 			final Agent a = futureAgent.get();
 			if (a != null)
-				pool.add(a);
+				agents.add(a);
 		}
+	}
+
+	private Callable<Agent> createAgentTask(Factory<Agent> agentFactory) {
+		return () -> {
+			final Agent a = agentFactory.create();
+			if (a != null)
+				a.setFitness(testFitness2(a, expected));
+			return a;
+		};
+	}
+
+	private Callable<Agent> createRandomAgentTask(Random random) {
+		return () -> {
+			final Agent a = Agent.createRandomAgent(random);
+			a.setFitness(testFitness2(a, expected));
+			return a;
+		};
+	}
+
+	private Callable<Agent> crossAgentsTask(Agent parent1, Agent parent2, Random random) {
+		return () -> {
+			final Agent a = Mutator.cross(parent1, parent2, random);
+			a.setFitness(testFitness2(a, expected));
+			return a;
+		};
+	}
+
+	private Callable<Agent> mutateAgentTask(Agent parent, int rounds, Random random) {
+		return () -> {
+			final Agent a = Mutator.mutate(parent, rounds, random);
+			a.setFitness(testFitness2(a, expected));
+			return a;
+		};
 	}
 
 	public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
@@ -162,7 +196,7 @@ public class CodeGeneration
 		final OptionSet options = parser.parse(args);
 
 		// Create instance
-		final CodeGeneration codeGeneration = new CodeGeneration();
+		final CodeGeneration codeGeneration = new CodeGeneration(ExactFunction.COS);
 
 		if (options.has("visualize"))
 			codeGeneration.eventBus.register(new GraphWindow());
@@ -180,7 +214,7 @@ public class CodeGeneration
 		codeGeneration.eventBus.register(new HeroPersistance(popFolder));
 
 		// x -> (x - 50) * (x - 50) / 25 + 50;
-		codeGeneration.generate(ExactFunction.COS, poolSize, new Random());
+		codeGeneration.generate(poolSize, new Random());
 	}
 
 	/**
@@ -266,45 +300,12 @@ public class CodeGeneration
 		return false;
 	}
 
-	private static Callable<Agent> createAgentTask(Factory<Agent> agentFactory, DataPoints expected) {
-		return () -> {
-			final Agent a = agentFactory.create();
-			if (a != null)
-				a.setFitness(testFitness2(a, expected));
-			return a;
-		};
-	}
-
-	private static Callable<Agent> createRandomAgentTask(Random random, DataPoints expected) {
-		return () -> {
-			final Agent a = Agent.createRandomAgent(random);
-			a.setFitness(testFitness2(a, expected));
-			return a;
-		};
-	}
-
-	private static Callable<Agent> crossAgentsTask(Agent parent1, Agent parent2, Random random, DataPoints expected) {
-		return () -> {
-			final Agent a = Mutator.cross(parent1, parent2, random);
-			a.setFitness(testFitness2(a, expected));
-			return a;
-		};
-	}
-
 	private static File generatePopulationFolder(File folder) {
 		File popFolder;
 		int pop = 1;
 		while ((popFolder = new File(folder, "pop-" + pop + "/")).exists())
 			pop++;
 		return popFolder;
-	}
-
-	private static Callable<Agent> mutateAgentTask(Agent parent, int rounds, Random random, DataPoints expected) {
-		return () -> {
-			final Agent a = Mutator.mutate(parent, rounds, random);
-			a.setFitness(testFitness2(a, expected));
-			return a;
-		};
 	}
 
 	private static class TestWorker implements Runnable
