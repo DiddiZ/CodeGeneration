@@ -13,7 +13,7 @@
 		<conf name="optional" visibility="public" description="contains all optional dependencies"/>
 	</configurations>
 	<dependencies>
-		<dependency org="de.diddiz" name="utils" rev="1.4" changing="true" conf="provided->master;runtime"/>
+		<dependency org="de.diddiz" name="utils" rev="1.5" changing="true" conf="provided->master;runtime"/>
 		<dependency org="com.google.code.gson" name="gson" rev="2.8.0"/>
 		<dependency org="net.sf.jopt-simple" name="jopt-simple" rev="6.0-alpha-1"/>
 	</dependencies>
